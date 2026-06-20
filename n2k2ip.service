@@ -1,0 +1,45 @@
+# systemd unit for the n2k2ip gateway (SocketCAN -> TCP/YDRAW).
+#
+# Install (the script is stdlib-only, so no venv/pip is needed):
+#   sudo mkdir -p /opt/n2k2ip
+#   sudo cp n2k2ip.py /opt/n2k2ip/
+#   sudo cp n2k2ip.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now n2k2ip.service
+#   journalctl -u n2k2ip.service -f
+
+[Unit]
+Description=n2k2ip — NMEA2000 (SocketCAN) to TCP/YDRAW gateway
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/n2k2ip
+
+# Bring can0 up at the NMEA2000 bitrate before starting.
+# restart-ms 100 lets the controller auto-recover from a bus-off.
+# REMOVE this line if another service/unit already owns and configures can0
+# (e.g. a fastnet2n2k bridge on the same host) — bringing the link down/up here
+# would disrupt it.
+ExecStartPre=/bin/sh -c 'ip link set can0 down 2>/dev/null; ip link set can0 up type can bitrate 250000 restart-ms 100'
+
+ExecStart=/usr/bin/python3 /opt/n2k2ip/n2k2ip.py --channel can0 --port 1457
+Restart=always
+RestartSec=5
+
+# === RESOURCE LIMITS ===
+OOMScoreAdjust=-700
+OOMPolicy=continue
+MemoryMax=64M
+MemoryHigh=48M
+TimeoutStopSec=15
+
+# === LOGGING ===
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=n2k2ip
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
