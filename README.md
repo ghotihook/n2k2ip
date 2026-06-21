@@ -31,6 +31,10 @@ The data is **live**, and stale data is worthless. Everything here serves that:
 
 - Linux with SocketCAN (a `can0`-style interface)
 - Python **3.9+** — **no third-party packages** (stdlib only)
+- A **synchronised host clock** — YDRAW timestamps are taken from the host's UTC
+  clock, so make sure NTP is running and disciplined (e.g. `systemd-timesyncd` or
+  `chrony`). On a headless/boat box without a network, fit an RTC or expect the
+  clock — and therefore the timestamps — to be wrong until time is acquired.
 
 ## Quick start
 
@@ -72,7 +76,11 @@ Each line is one CAN frame:
 HH:MM:SS.mmm R <8-hex CAN-ID> <space-separated hex data bytes>
 ```
 
-Lines are terminated with `\r\n`. Direction is always `R` (received).
+Lines are terminated with `\r\n`. Direction is always `R` (received). The
+timestamp is the host clock in **UTC** (`HH:MM:SS.mmm`). The YDRAW spec calls for
+UTC sourced from the NMEA 2000 bus when available; we don't decode the bus, so we
+use the host's UTC clock instead — accurate as long as the host clock is synced
+(e.g. NTP).
 
 **Multi-frame (fast-packet) messages are passed through, not reassembled** — and that
 is correct for YDRAW, which is a per-CAN-frame format. Each fast-packet frame is sent

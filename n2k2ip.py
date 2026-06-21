@@ -36,7 +36,7 @@ log = logging.getLogger("n2k2ip")
 def frame_to_ydraw(can_id: int, data: bytes) -> bytes:
     """Render a CAN frame as one YDRAW line: 'HH:MM:SS.mmm R <8-hex id> <hex bytes>'."""
     now = time.time()
-    stamp = time.strftime("%H:%M:%S", time.localtime(now)) + ".%03d" % int((now % 1) * 1000)
+    stamp = time.strftime("%H:%M:%S", time.gmtime(now)) + ".%03d" % int((now % 1) * 1000)
     body = data.hex(" ").upper()
     line = "%s R %08X" % (stamp, can_id)
     return ((line + " " + body) if body else line).encode("ascii") + b"\r\n"
