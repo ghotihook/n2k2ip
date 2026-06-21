@@ -7,7 +7,7 @@ YDRAW line, to every connected TCP client.
 Designed for *live* data, where stale data is worthless:
   - Each client has a bounded outbound queue. If a client can't keep up (a slow or
     stalled wifi link), the OLDEST whole lines are dropped so it always receives
-    recent frames, never a growing backlog. Freshness is bounded by --max-queue.
+    recent frames, never a growing backlog. Freshness is bounded by MAX_QUEUE.
   - Writes are non-blocking, so one slow/dead client never stalls the CAN reader or
     the other clients.
   - TCP_NODELAY on every client: each line hits the wire immediately (no Nagle).
@@ -29,6 +29,10 @@ CAN_FRAME    = struct.Struct("=IB3x8s")
 CAN_RTR_FLAG = 0x40000000   # remote-transmission request
 CAN_ERR_FLAG = 0x20000000   # error frame
 CAN_EFF_MASK = 0x1FFFFFFF   # 29-bit extended identifier
+
+# Max whole lines buffered per client before the oldest are dropped. Bounds how
+# stale a slow client's data can get; favours freshness over completeness.
+MAX_QUEUE = 100
 
 log = logging.getLogger("n2k2ip")
 
@@ -57,9 +61,9 @@ class CanDown(Exception):
 
 
 class Gateway:
-    def __init__(self, channel: str, port: int, max_queue: int):
+    def __init__(self, channel: str, port: int):
         self.channel = channel
-        self.max_queue = max_queue
+        self.max_queue = MAX_QUEUE
         self.clients: set[Client] = set()
         self.sel = selectors.DefaultSelector()
         self.frames = 0
@@ -232,16 +236,13 @@ def main():
     ap.add_argument("--channel", default="can0", help="SocketCAN interface (default: can0)")
     ap.add_argument("--port", type=int, default=1457,
                     help="TCP port to serve YDRAW on (default: 1457)")
-    ap.add_argument("--max-queue", type=int, default=1000,
-                    help="Max lines buffered per client before dropping the oldest; "
-                         "bounds staleness for a slow client (default: 1000)")
     ap.add_argument("--log-level", default="INFO",
                     choices=("DEBUG", "INFO", "WARNING", "ERROR"))
     args = ap.parse_args()
 
     logging.basicConfig(level=getattr(logging, args.log_level),
                         format="%(asctime)s [n2k2ip] %(levelname)s %(message)s")
-    gw = Gateway(args.channel, args.port, args.max_queue)
+    gw = Gateway(args.channel, args.port)
     try:
         gw.run()
     except KeyboardInterrupt:

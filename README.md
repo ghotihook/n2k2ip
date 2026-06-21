@@ -17,7 +17,7 @@ The data is **live**, and stale data is worthless. Everything here serves that:
 - **Drop-old, never back up.** Each client has a bounded outbound queue. When a client
   can't keep up (a slow or stalled Wi-Fi link), the *oldest* whole lines are dropped so
   it always receives recent frames instead of a growing backlog. Maximum staleness is
-  bounded by `--max-queue`.
+  bounded by the `MAX_QUEUE` constant (100 lines) in `n2k2ip.py`.
 - **One slow client can't hurt the others.** All writes are non-blocking; a stalled or
   dead client never blocks the CAN reader or the other clients.
 - **Low latency by default.** `TCP_NODELAY` is set on every client, so each line hits
@@ -58,15 +58,19 @@ nc <host> 1457
 ## Usage
 
 ```
-python3 n2k2ip.py [--channel can0] [--port 1457] [--max-queue 1000] [--log-level INFO]
+python3 n2k2ip.py [--channel can0] [--port 1457] [--log-level INFO]
 ```
 
 | option | default | meaning |
 |---|---|---|
 | `--channel` | `can0` | SocketCAN interface to read |
 | `--port` | `1457` | TCP port to serve YDRAW on |
-| `--max-queue` | `1000` | Max lines buffered per client before the oldest are dropped. Lower = fresher data, more drops under congestion; higher = more tolerance for brief stalls, more potential staleness. ~1000 lines is roughly 2–3 s of backlog on a busy bus. |
 | `--log-level` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+
+Per-client buffer depth is the `MAX_QUEUE` constant in `n2k2ip.py` (100 lines). When a
+client falls behind, the oldest lines are dropped so it never lags more than ~100
+frames — roughly 0.2–0.5 s of backlog on a busy bus. Raise it only if you'd rather
+tolerate longer stalls than skip frames.
 
 ## Output format (YDRAW)
 
