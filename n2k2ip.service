@@ -23,12 +23,13 @@ After=network.target
 Type=simple
 User=root
 
-# Bring can0 up at the NMEA2000 bitrate before starting.
-# restart-ms 100 lets the controller auto-recover from a bus-off.
-# REMOVE this line if another service/unit already owns and configures can0
-# (e.g. a fastnet2n2k bridge on the same host) — bringing the link down/up here
-# would disrupt it.
-ExecStartPre=/bin/sh -c 'ip link set can0 down 2>/dev/null; ip link set can0 up type can bitrate 250000 restart-ms 100'
+# Bring can0 up at the NMEA2000 bitrate — but only if it isn't already up, so this
+# is safe to run alongside another CAN service (e.g. a fastnet2n2k bridge) that
+# shares can0: whoever starts first configures it, the others see it up and leave
+# it alone (no interface flap, no start-up race). restart-ms 100 lets the
+# controller auto-recover from a bus-off. The trailing check fails the unit if
+# can0 can't be brought up at all.
+ExecStartPre=/bin/sh -c 'ip link show can0 | grep -qw UP || ip link set can0 up type can bitrate 250000 restart-ms 100 2>/dev/null; ip link show can0 | grep -qw UP'
 
 # /usr/local/bin/n2k2ip is where `pipx install --global` lands the command.
 # Run `which n2k2ip` if yours differs.
