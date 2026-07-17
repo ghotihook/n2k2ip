@@ -1,12 +1,19 @@
 # systemd unit for the n2k2ip gateway (SocketCAN -> TCP/YDRAW).
 #
-# Install (the script is stdlib-only, so no venv/pip is needed):
-#   sudo mkdir -p /opt/n2k2ip
-#   sudo cp n2k2ip.py /opt/n2k2ip/
+# Install:
+#   sudo apt install pipx                 # once, if you don't have it
+#   sudo pipx install --global n2k2ip     # -> /usr/local/bin/n2k2ip
 #   sudo cp n2k2ip.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now n2k2ip.service
 #   journalctl -u n2k2ip.service -f
+#
+# Update later with: sudo pipx upgrade --global n2k2ip
+#
+# No-pip fallback: n2k2ip is a single stdlib-only file, so you can instead just
+# copy it and point ExecStart at it:
+#   sudo mkdir -p /opt/n2k2ip && sudo cp n2k2ip.py /opt/n2k2ip/
+#   ExecStart=/usr/bin/python3 /opt/n2k2ip/n2k2ip.py --channel can0 --port 1457
 
 [Unit]
 Description=n2k2ip — NMEA2000 (SocketCAN) to TCP/YDRAW gateway
@@ -15,7 +22,6 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/n2k2ip
 
 # Bring can0 up at the NMEA2000 bitrate before starting.
 # restart-ms 100 lets the controller auto-recover from a bus-off.
@@ -24,7 +30,9 @@ WorkingDirectory=/opt/n2k2ip
 # would disrupt it.
 ExecStartPre=/bin/sh -c 'ip link set can0 down 2>/dev/null; ip link set can0 up type can bitrate 250000 restart-ms 100'
 
-ExecStart=/usr/bin/python3 /opt/n2k2ip/n2k2ip.py --channel can0 --port 1457
+# /usr/local/bin/n2k2ip is where `pipx install --global` lands the command.
+# Run `which n2k2ip` if yours differs.
+ExecStart=/usr/local/bin/n2k2ip --channel can0 --port 1457
 Restart=always
 RestartSec=5
 

@@ -24,6 +24,8 @@ import struct
 import time
 from collections import deque
 
+__version__ = "0.1.0"
+
 # struct can_frame (Linux): u32 can_id, u8 dlc, 3 pad bytes, 8 data bytes
 CAN_FRAME    = struct.Struct("=IB3x8s")
 CAN_RTR_FLAG = 0x40000000   # remote-transmission request
@@ -238,6 +240,8 @@ def main():
                     help="TCP port to serve YDRAW on (default: 1457)")
     ap.add_argument("--log-level", default="INFO",
                     choices=("DEBUG", "INFO", "WARNING", "ERROR"))
+    ap.add_argument("--version", action="version",
+                    version=f"n2k2ip {__version__}")
     args = ap.parse_args()
 
     logging.basicConfig(level=getattr(logging, args.log_level),

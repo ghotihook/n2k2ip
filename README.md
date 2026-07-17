@@ -36,6 +36,27 @@ The data is **live**, and stale data is worthless. Everything here serves that:
   `chrony`). On a headless/boat box without a network, fit an RTC or expect the
   clock — and therefore the timestamps — to be wrong until time is acquired.
 
+## Install
+
+On Raspberry Pi OS (and other Debian 12+ systems) the system Python is
+"externally managed", so use **pipx** — it drops the `n2k2ip` command on your
+`PATH` in its own isolated environment and sidesteps `--break-system-packages`:
+
+```sh
+sudo apt install pipx        # once, if you don't have it
+pipx install n2k2ip
+```
+
+There are no third-party dependencies, so plain `pip install n2k2ip` also works
+if you'd rather (add `--break-system-packages`, or install into a virtualenv).
+
+Because n2k2ip is a single stdlib-only file, you can also skip installing
+entirely and run it straight from a checkout:
+
+```sh
+python3 n2k2ip.py --channel can0 --port 1457
+```
+
 ## Quick start
 
 ```sh
@@ -43,7 +64,7 @@ The data is **live**, and stale data is worthless. Everything here serves that:
 sudo ip link set can0 up type can bitrate 250000
 
 # serve YDRAW on tcp/1457
-python3 n2k2ip.py --channel can0 --port 1457
+n2k2ip --channel can0 --port 1457
 ```
 
 Connect and watch:
@@ -58,8 +79,10 @@ nc <host> 1457
 ## Usage
 
 ```
-python3 n2k2ip.py [--channel can0] [--port 1457] [--log-level INFO]
+n2k2ip [--channel can0] [--port 1457] [--log-level INFO]
 ```
+
+(or `python3 n2k2ip.py …` when running from a checkout)
 
 | option | default | meaning |
 |---|---|---|
@@ -96,9 +119,11 @@ over UDP/broadcast on Wi-Fi**, where reliability and low jitter matter most.
 
 ## Run as a service (systemd)
 
+Install it globally with pipx, then drop in the shipped unit:
+
 ```sh
-sudo mkdir -p /opt/n2k2ip
-sudo cp n2k2ip.py /opt/n2k2ip/
+sudo apt install pipx                 # once, if you don't have it
+sudo pipx install --global n2k2ip     # -> /usr/local/bin/n2k2ip
 sudo cp n2k2ip.service /etc/systemd/system/
 # edit the unit if your channel/port differ, or if can0 is brought up elsewhere
 sudo systemctl daemon-reload
@@ -106,8 +131,9 @@ sudo systemctl enable --now n2k2ip.service
 journalctl -u n2k2ip.service -f
 ```
 
-Because the script is stdlib-only, "install" is just copying the one file — no venv,
-no `pip`.
+Update later with `sudo pipx upgrade --global n2k2ip`. If you'd rather not
+pip-install at all, the single stdlib-only file can just be copied and run
+directly — see the comment header in `n2k2ip.service`.
 
 ## Behaviour notes
 

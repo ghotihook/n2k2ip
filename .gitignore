@@ -1,0 +1,13 @@
+# Python build / packaging artifacts
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Local editor / tooling
+.claude/settings.local.json
