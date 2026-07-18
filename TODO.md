@@ -51,3 +51,24 @@ sudo py-spy top --pid <n2k2ip pid>      # 30 s is enough
   line gets corrupted on the wire (same edge as the current deque drop-oldest).
 
 Lowest-risk first pass once profiled: #1 + #2, measure before/after on the box.
+
+## Investigate: dedicated can0.service vs inline ExecStartPre
+
+Today both n2k2ip and fastnet2n2k bring can0 up with an idempotent `ExecStartPre`
+one-liner (only configures the link if it isn't already up), which is safe to run
+with multiple CAN services sharing can0 on one host. Works fine as-is.
+
+Cleaner alternative for a multi-service box: a single oneshot `can0.service`
+(`Type=oneshot`, `RemainAfterExit=yes`) that owns the bitrate / `restart-ms`
+config, with each bridge dropping its `ExecStartPre` and declaring
+`Requires=can0.service` + `After=can0.service`. Benefits: one source of truth for
+the CAN config (no duplicated shell across units that can drift), real dependency
+modelling, and the start-up race goes away structurally instead of being swallowed.
+
+Wrinkle: can0 setup is a machine-level concern, not owned by either PyPI package —
+so keep the inline `ExecStartPre` as the standalone default and ship `can0.service`
+as an *optional* template for multi-service hosts. The two are compatible: with
+`can0.service` present, the inline `ExecStartPre` just sees can0 already up and
+no-ops.
+
+Leave as-is for now; revisit if the multi-service setup grows.
